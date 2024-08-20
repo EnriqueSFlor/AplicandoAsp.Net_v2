@@ -27,7 +27,7 @@ namespace ScreenSound.API.Endpoints
 
             });
 
-            app.MapPost("/Musicas", ([FromServices] DAL<Musica> dal, [FromBody] MusicaRequest musicaRequest) =>
+            app.MapPost("/Musicas", ([FromServices] DAL<Musica> dal, [FromServices] DAL<Genero> dalGenero, [FromBody] MusicaRequest musicaRequest) =>
             {
 
                 var musica = new Musica(musicaRequest.nome)
@@ -35,7 +35,7 @@ namespace ScreenSound.API.Endpoints
                     ArtistaId = musicaRequest.ArtistaId,
                     AnoLancamento = musicaRequest.anoLancamento,
                     Generos = musicaRequest.Generos is not null?
-                    GeneroRequestConvert(musicaRequest.Generos):
+                    GeneroRequestConvert(musicaRequest.Generos, dalGenero) :
                     new List<Genero>()
                 };
                 dal.Adicionar(musica);
@@ -68,9 +68,23 @@ namespace ScreenSound.API.Endpoints
 
         }
 
-        private static ICollection<Genero> GeneroRequestConvert(ICollection<GeneroRequest> generos)
+        private static ICollection<Genero> GeneroRequestConvert(ICollection<GeneroRequest> generos, DAL<Genero> dalGenero)
         {
-            return generos.Select(a => RequestToEntity(a)).ToList();
+            var listaDeGeneros = new List<Genero>();
+            foreach (var item in generos)
+            {
+                var entity = RequestToEntity(item);
+                var genero = dalGenero.RecuperarPor(g => g.Nome.ToUpper().Equals(item.Nome.ToUpper()));
+                if (genero is not null)
+                {
+                    listaDeGeneros.Add(genero);
+                } else
+                {
+                    listaDeGeneros.Add(entity);
+                }
+            }
+
+            return listaDeGeneros;
         }
 
         private static Genero RequestToEntity(GeneroRequest genero)
